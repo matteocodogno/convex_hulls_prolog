@@ -24,6 +24,16 @@ printlist([]) :- !.
 printlist([X | List]) :- write(X), nl, printlist(List).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                    STACK                                     %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+pop(E, [E | Es], Es).
+
+peek(E, [E | _]).
+
+push(E, Es, [E | Es]).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                  FILE CSV                                    %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -48,9 +58,9 @@ get_coordinate(P, X, Y) :- nonvar(P), !, arg(1, P, X), arg(2, P, Y).
 get_min_point([Elem], Elem) :- !.
 
 get_min_point([H, S | T], Min) :- get_coordinate(H, Xh, Yh),
-	get_coordinate(S, Xs, Ys), ( Xh < Xs -> get_min_point([H | T], Min) ;
-	Xs < Xh -> get_min_point([S | T], Min) ; 
-	Yh < Ys -> get_min_point([H | T], Min) ; get_min_point([S | T], Min) ).
+	get_coordinate(S, Xs, Ys), ( Yh < Ys -> get_min_point([H | T], Min) ;
+	Ys < Yh -> get_min_point([S | T], Min) ; 
+	Xh < Xs -> get_min_point([H | T], Min) ; get_min_point([S | T], Min) ).
 
 area2(A, B, C, Area) :- nonvar(A), !, nonvar(B), !, nonvar(C),	!, 
 	get_coordinate(A, X1, Y1), get_coordinate(B, X2, Y2), 
@@ -65,7 +75,7 @@ left_on(A, B, C) :- nonvar(A), !, nonvar(B), !, nonvar(C), !,
 	area2(A, B, C, Area), Area < 0 -> true ; false.
 
 collinear(A, B, C) :- nonvar(A), !, nonvar(B), !, nonvar(C), !,
-	area2(A, B, C, Area), Area < 0 -> true ; false.
+	area2(A, B, C, Area), Area = 0 -> true ; false.
 
 angle2d(A, B, R) :- nonvar(A), !, nonvar(B), !, 
 	get_coordinate(A, X1, Y1), get_coordinate(B, X2, Y2), 
@@ -80,3 +90,27 @@ create_pairs_point(_, [], []) :- !.
 create_pairs_point(S, [H | T], Pairs) :- nonvar(S), !, angle2d(S, H, R), 
 	create_pairs_point(S, T, NewPairs), Pairs = [R-H | NewPairs].
 
+compute_convex_hull([], _) :- !. 
+
+compute_convex_hull([H | T], CH) :- nonvar(H), !, nonvar(T), !,
+	pop(Middle, CH, NewCH), 
+	peek(Tail, NewCH),
+	( left(Tail, Middle, H) -> 
+		push(Middle, NewCH, NewCH2), 
+		push(H, NewCH2, NewCH3),
+		compute_convex_hull(T, NewCH3) ;
+		left_on(Tail, Middle, H) ->
+		compute_convex_hull([H | T], NewCH) ;
+		collinear(Tail, Middle, H) -> 
+		push(H, NewCH, NewCH4),
+		compute_convex_hull(T, NewCH4) ).
+
+ch(Points, Result) :- nonvar(Points), !, get_min_point(Points, MinPoint), 
+	delete(Points, MinPoint, Points2),
+	create_pairs_point(MinPoint, Points2, Pairs), 
+	keysort(Pairs, PairsSorted), 
+	pairs_keys_values(PairsSorted, _, [Hv | Tv]),
+	push(MinPoint, [], Stack), 
+	push(Hv, Stack, Res), 
+	compute_convex_hull(Tv, Res),
+	push(MinPoint, Res, Result). 
