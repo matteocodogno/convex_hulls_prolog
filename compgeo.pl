@@ -90,20 +90,20 @@ create_pairs_point(_, [], []) :- !.
 create_pairs_point(S, [H | T], Pairs) :- nonvar(S), !, angle2d(S, H, R), 
 	create_pairs_point(S, T, NewPairs), Pairs = [R-H | NewPairs].
 
-compute_convex_hull([], _) :- !. 
+compute_convex_hull([], Stack, Stack) :- !. 
 
-compute_convex_hull([H | T], CH) :- nonvar(H), !, nonvar(T), !,
-	pop(Middle, CH, NewCH), 
-	peek(Tail, NewCH),
+compute_convex_hull([H | T], Stack, CH) :- nonvar(H), !, nonvar(T), !,
+	pop(Middle, Stack, NewStack), 
+	peek(Tail, NewStack),
 	( left(Tail, Middle, H) -> 
-		push(Middle, NewCH, NewCH2), 
-		push(H, NewCH2, NewCH3),
-		compute_convex_hull(T, NewCH3) ;
+		push(Middle, NewStack, NewStack2), 
+		push(H, NewStack2, NewStack3),
+		compute_convex_hull(T, NewStack3, CH) ;
 		left_on(Tail, Middle, H) ->
-		compute_convex_hull([H | T], NewCH) ;
+		compute_convex_hull([H | T], NewStack, CH) ;
 		collinear(Tail, Middle, H) -> 
-		push(H, NewCH, NewCH4),
-		compute_convex_hull(T, NewCH4) ).
+		push(H, NewStack, NewStack4),
+		compute_convex_hull(T, NewStack4, CH) ).
 
 ch(Points, Result) :- nonvar(Points), !, get_min_point(Points, MinPoint), 
 	delete(Points, MinPoint, Points2),
@@ -111,6 +111,6 @@ ch(Points, Result) :- nonvar(Points), !, get_min_point(Points, MinPoint),
 	keysort(Pairs, PairsSorted), 
 	pairs_keys_values(PairsSorted, _, [Hv | Tv]),
 	push(MinPoint, [], Stack), 
-	push(Hv, Stack, Res), 
-	compute_convex_hull(Tv, Res),
+	push(Hv, Stack, Stack2), 
+	compute_convex_hull(Tv, Stack2, Res),
 	push(MinPoint, Res, Result). 
