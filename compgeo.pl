@@ -38,20 +38,20 @@ push(E, Es, [E | Es]).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 read_points(Filename, Points) :- nonvar(Filename), !, exists_file(Filename), !,
-	csv_read_file(Filename, Rows, [separator(0'\t), arity(2), functor(point)]),
+	csv_read_file(Filename, Rows, [separator(0'\t), arity(2), functor(pt)]),
 	rem(Rows, Points), maplist(assert, Points).
 
-remove_all_points :- retract(point(_, _)), fail.
+remove_all_points :- retract(pt(_, _)), fail.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                  GEOMETRY                                    %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 new_point(P, [X, Y]) :- nonvar(P), !, nonvar(X), !, nonvar(Y), !,
-	not( verify(point/3, point(P), [X, Y]) ), !, assert(point(P, [X, Y])).
+	not( verify(pt/3, pt(P), [X, Y]) ), !, assert(pt(P, [X, Y])).
 
 new_point([X, Y]) :- nonvar(X), !, nonvar(Y), !,
-	not( verify(point/2, point, [X, Y]) ), !, assert(point([X, Y])).
+	not( verify(pt/2, pt, [X, Y]) ), !, assert(pt([X, Y])).
 
 get_coordinate(P, X, Y) :- nonvar(P), !, arg(1, P, X), arg(2, P, Y).
 
@@ -72,12 +72,12 @@ left(A, B, C) :- nonvar(A), !, nonvar(B), !, nonvar(C), !,
 	area2(A, B, C, Area), Area > 0 -> true ; false.
 
 left_on(A, B, C) :- nonvar(A), !, nonvar(B), !, nonvar(C), !,
-	area2(A, B, C, Area), Area < 0 -> true ; false.
+	area2(A, B, C, Area), Area >= 0 -> true ; false.
 
 collinear(A, B, C) :- nonvar(A), !, nonvar(B), !, nonvar(C), !,
 	area2(A, B, C, Area), Area = 0 -> true ; false.
 
-angle2d(A, B, R) :- nonvar(A), !, nonvar(B), !, 
+angle2d(B, A, R) :- nonvar(A), !, nonvar(B), !, 
 	get_coordinate(A, X1, Y1), get_coordinate(B, X2, Y2), 
 	YExpr is Y1 - Y2, XExpr is X1 - X2, R is atan2(YExpr, XExpr).
 
@@ -95,15 +95,15 @@ compute_convex_hull([], Stack, Stack) :- !.
 compute_convex_hull([H | T], Stack, CH) :- nonvar(H), !, nonvar(T), !,
 	pop(Middle, Stack, NewStack), 
 	peek(Tail, NewStack),
-	( left(Tail, Middle, H) -> 
-		push(Middle, NewStack, NewStack2), 
-		push(H, NewStack2, NewStack3),
-		compute_convex_hull(T, NewStack3, CH) ;
-		left_on(Tail, Middle, H) ->
-		compute_convex_hull([H | T], NewStack, CH) ;
+	( left_on(Tail, Middle, H) ->
+		( left(Tail, Middle, H) -> 
+			push(Middle, NewStack, NewStack2), 
+			push(H, NewStack2, NewStack3),
+			compute_convex_hull(T, NewStack3, CH) ;
 		collinear(Tail, Middle, H) -> 
-		push(H, NewStack, NewStack4),
-		compute_convex_hull(T, NewStack4, CH) ).
+			push(H, NewStack, NewStack4),
+			compute_convex_hull(T, NewStack4, CH) ) ;
+		compute_convex_hull([H | T], NewStack, CH) ).
 
 ch(Points, Result) :- nonvar(Points), !, get_min_point(Points, MinPoint), 
 	delete(Points, MinPoint, Points2),
